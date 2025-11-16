@@ -36,6 +36,7 @@ LANGUAGE sql
 SECURITY DEFINER
 VOLATILE
 AS $$
+-- Версия: 2.0.0 @sqlmaster
    WITH RECURSIVE membership_tree(grpid, userid, lvl, rolname, branch) AS (
        -- Базовый случай: начальная роль
        SELECT pg_roles.oid, pg_roles.oid, -1 AS lvl, r.rolname, r.rolname::text AS branch
@@ -93,13 +94,27 @@ LEFT JOIN privileges p ON p.grantee = m.grpname
  ORDER BY m.usrname, m.lvl;
 $$;
 
-COMMENT ON FUNCTION adm.get_membership_tree_all(varchar, varchar, varchar) IS 
-'Полный анализ привилегий PostgreSQL: дерево членства в ролях и права на объекты.
-Параметры:
-- username: роль/пользователь (поддержка wildcard %)
-- schema_name: схема (поддержка wildcard %)  
-- object_name: объект (таблица/функция, поддержка wildcard %)
-Возвращает детализированную информацию о правах доступа с путём наследования.';
+COMMENT ON FUNCTION adm.get_membership_tree_all(varchar, varchar, varchar) IS
+$$
+- Версия: 2.0.0 @sqlmaster
+Полный анализ привилегий PostgreSQL: дерево членства в ролях и права на объекты.
+-
+Параметры (все необязательные, поддерживают wildcard '%'):
+- username:     роль/пользователь (например, 'role_example' или '%')
+- schema_name:  схема (например, 'public' или '%')
+- object_name:  объект — таблица или функция (например, 'my_table' или '%')
+-
+Возвращает детализированную информацию о правах доступа с указанием цепочки наследования ролей.
+-
+Примеры использования:
+- SELECT * FROM adm.get_membership_tree_all();                                  -- все права на все объекты во всех схемах
+- SELECT * FROM adm.get_membership_tree_all('role_example');                     -- права для роли 'role_example' на все объекты
+- SELECT * FROM adm.get_membership_tree_all('role_example', 'test');             -- права для роли в схеме 'test'
+- SELECT * FROM adm.get_membership_tree_all('role_example', 'test', 'table_3');  -- права на конкретную таблицу
+- SELECT * FROM adm.get_membership_tree_all('role_example', 'test', 'check_unlogged_tables'); -- права на функцию
+- SELECT * FROM adm.get_membership_tree_all('%', '%', 'table_3');                -- поиск объекта с именем 'table_3' в любой схеме и у любой роли
+-
+$$;
 ```
 
 #### 📊 Примеры использования с реальными результатами
